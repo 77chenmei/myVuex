@@ -1,17 +1,36 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <p>
+      {{ $store.state.count}}
+      {{ $store.getters.doubleCount}}
+    </p>
+    <hr />
+    <p>
+      {{ $store.state.student.count }}
+      <!-- {{ $store.getters.studentDoubleCount }} -->
+      {{ $store.getters['student/studentDoubleCount']}}
+    </p>
+    <button @click="handleClick"> click </button>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
-
 export default {
   name: 'App',
-  components: {
-    HelloWorld
+  created() {
+    console.log(this.$store);
+  },
+  methods: {
+    handleClick() {
+      this.$store.commit('chageCount', {
+        num:11,
+      })
+      //  this.$store.commit('student/chageCount', {
+      //   num:11,
+      //})
+      // this.$store.state.count ++;
+      // this.$store.state.student.count ++ ;
+    }
   }
 }
 </script>
