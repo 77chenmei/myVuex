@@ -1,15 +1,11 @@
 <template>
   <div id="app">
     <p>
-      {{ $store.state.count}}
-      {{ $store.getters.doubleCount}}
+     {{ $store.state.count}}
     </p>
     <hr />
-    <p>
-      {{ $store.state.student.count }}
-      <!-- {{ $store.getters.studentDoubleCount }} -->
-      {{ $store.getters['student/studentDoubleCount']}}
-    </p>
+    {{ $store.state.student.count }}
+
     <button @click="handleClick"> click </button>
   </div>
 </template>
@@ -18,18 +14,12 @@
 export default {
   name: 'App',
   created() {
-    console.log(this.$store);
+     console.log(this.$store);
   },
   methods: {
     handleClick() {
-      this.$store.commit('chageCount', {
-        num:11,
-      })
-      //  this.$store.commit('student/chageCount', {
-      //   num:11,
-      //})
-      // this.$store.state.count ++;
-      // this.$store.state.student.count ++ ;
+      this.$store.state.count ++;
+      this.$store.state.student.count ++ ;
     }
   }
 }
