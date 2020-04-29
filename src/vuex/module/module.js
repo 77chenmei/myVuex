@@ -1,8 +1,11 @@
+import { forEachValue } from '../until';
+
 export default class Module {
   constructor(rawModlue) {
     this.state = rawModlue.state || {};
     this._rawModule = rawModlue;
     this._chidren = rawModlue.modules;
+    this._namespaced = !!rawModlue.namespaced
   }
 
   getChild(key) {
@@ -11,10 +14,14 @@ export default class Module {
 
   forEachChild(fn) {
     if (this._chidren) {
-      
-      Object.keys(this._chidren).forEach(moduleName => {
-        fn(this._chidren[moduleName], moduleName);
-      })
+      forEachValue(this._chidren, (childModule, moduleName) => fn(childModule, moduleName))
+    }
+  }
+
+  forEachGetter(fn) {
+    const getters = this._rawModule.getters;
+    if(getters) {
+      forEachValue(getters, (getterFn, getterName) => fn(getterFn, getterName))
     }
   }
 }

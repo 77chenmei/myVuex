@@ -1,11 +1,15 @@
 import applyMixin from './minix';
 import ModuleCollection from './module/module-collection';
+import {partial} from './until';
 
 let vue;
 class Store {
   constructor(option){
     // 将 option重新整理
     this._modules = new ModuleCollection(option);
+    this._wrappedGetters = {};
+    this.getters = {};
+    this._makeLocalGettersCache = {};
     installModule(this, option.state, [], this._modules.root)
     // $store.state 及 数据双向绑定
     resetStoreVM(this, option); 
@@ -31,6 +35,14 @@ function installModule(Store,rootState, path, module) {
     parentState[moduleName] = module.state;
   }
 
+  // 获取 namespaced 的 值 studnet/
+  const nameSpace = Store._modules.getNamespace(path);
+  const local = makeLocalContext(Store, path, nameSpace);
+  module.forEachGetter((getterFn, getterName) => {
+    // 将 namespace 和 getter 名称 拼接
+    const type = nameSpace + getterName;
+    registerGetter(Store, getterFn, type, local);
+  })
 
   // 循环遍历 module
   module.forEachChild((childModule, childName) => {
@@ -38,6 +50,69 @@ function installModule(Store,rootState, path, module) {
   })
 }
 
+/**
+ * 设置 模块的 state，getter
+ * @param {*} store 
+ * @param {*} path 
+ * @param {*} nameSpace 
+ */
+function makeLocalContext(store, path, nameSpace) {
+  const isNameSpaced = nameSpace !== '';
+  const local = {};
+  Object.defineProperties(local, {
+    state: {
+      get:() => getNestedState(path, store.state)
+    },
+    getters: {
+      get: isNameSpaced ? () => makeLocalGetter(store, nameSpace) : () => store.getters,
+    }
+  })
+
+  return local
+}
+
+/**
+ * 设置本模块的 getter
+ * @param {*} store 
+ * @param {*} nameSpace 
+ */
+function makeLocalGetter(store, nameSpace) {
+  if(!store._makeLocalGettersCache[nameSpace]) {
+    const splitPos = nameSpace.length;
+    const gettersProxy = {};
+
+    Object.keys(store.getters).forEach(keys =>{
+      if (keys.slice(0, splitPos) !== nameSpace) return;
+      const getterName = keys.slice(splitPos);
+      // gettersProxy[getterName] = store.getters[keys];
+
+      Object.defineProperty(gettersProxy, getterName, {
+        get: () => store.getters[keys]
+      })
+    })
+
+    store._makeLocalGettersCache[nameSpace] = gettersProxy;
+  }
+
+  return store._makeLocalGettersCache[nameSpace];
+}
+
+/**
+ * 注册 _wrappedGetters
+ * @param {*} store 
+ * @param {*} getterFn 
+ * @param {*} getterName 
+ */
+function registerGetter(store, getterFn, getterName, local) {
+  console.log(local);
+  store._wrappedGetters[getterName] = () => getterFn(local.state, local.getters, store.state, store.getters)
+}
+
+/**
+ * @desc 获取state
+ * @param {*} path 
+ * @param {*} rootState 
+ */
 function getNestedState(path, rootState) {
   return path.reduce((moduleState, path)=>{
     return moduleState[path];
@@ -51,11 +126,27 @@ function getNestedState(path, rootState) {
  */
 function resetStoreVM(store, option) {
   // this.state = option.state;
-  const _vm = new vue({
-    data: option.state
+
+  const computed = {}
+  const _wrappedGetters = store._wrappedGetters;
+  store._makeLocalGettersCache = {};
+  Object.keys(_wrappedGetters).forEach(getterName => {
+    // computed[getterName] = () => _wrappedGetters[getterName](store);
+    // store.getters[getterName] =  store._Vm[getterName];
+
+    computed[getterName] = partial(_wrappedGetters[getterName], store);
+    Object.defineProperty(store.getters, getterName, {
+      get: () => store._vm[getterName],
+      enumerable: true,
+    })
   })
 
-  store.state = _vm.$data;
+  store._vm = new vue({
+    data: option.state,
+    computed,
+  })
+
+  store.state = store. _vm.$data;
 }
 
 /**

@@ -1,4 +1,5 @@
 import Module from './module';
+import { forEachValue } from '../until';
 
 export default class ModuleCollection {
   constructor(rawModlue){
@@ -35,5 +36,13 @@ export default class ModuleCollection {
 
   get(path) {
     return  path.reduce((module, key) => module.getChild(key), this.root);
+  }
+
+  getNamespace(path) {
+    const module =  this.root;
+    return path.reduce((namespace, key) => {
+      const childModule = module.getChild(key);
+      return childModule._namespaced ?  namespace + key + '/' : namespace;
+    }, '')
   }
 }

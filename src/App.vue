@@ -2,9 +2,12 @@
   <div id="app">
     <p>
      {{ $store.state.count}}
+     {{ $store.getters.doubleCount}}
     </p>
     <hr />
     {{ $store.state.student.count }}
+    {{ $store.getters.studentDoubleCount}}
+    <!-- {{ $store.getters['student/studentDoubleCount'] }} -->
 
     <button @click="handleClick"> click </button>
   </div>
