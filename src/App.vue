@@ -2,13 +2,9 @@
   <div id="app">
     <p>
      {{ $store.state.count}}
-     {{ $store.getters.doubleCount}}
     </p>
     <hr />
     {{ $store.state.student.count }}
-    {{ $store.getters.studentDoubleCount}}
-    <!-- {{ $store.getters['student/studentDoubleCount'] }} -->
-
     <button @click="handleClick"> click </button>
   </div>
 </template>
@@ -21,8 +17,17 @@ export default {
   },
   methods: {
     handleClick() {
-      this.$store.state.count ++;
-      this.$store.state.student.count ++ ;
+      this.$store.commit({
+        type: 'changeCount',
+        payload: {
+          count: 3,
+        }
+      })
+      this.$store.commit('student/changeCount', {
+        count: 3,
+      })
+      // this.$store.state.count ++;
+      // this.$store.state.student.count ++ ;
     }
   }
 }

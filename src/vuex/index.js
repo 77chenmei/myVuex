@@ -1,6 +1,6 @@
 import applyMixin from './minix';
 import ModuleCollection from './module/module-collection';
-import {partial} from './until';
+import {partial, isObject, forEachValue} from './until';
 
 let vue;
 class Store {
@@ -10,11 +10,52 @@ class Store {
     this._wrappedGetters = {};
     this.getters = {};
     this._makeLocalGettersCache = {};
+    this._mutations = {};
+    // 是否是严格模式
+    this._strict = !!option.strict;
+    // 修改 state 锁
+    this._comitting = false;
     installModule(this, option.state, [], this._modules.root)
     // $store.state 及 数据双向绑定
     resetStoreVM(this, option); 
   }
+
+  get state() {
+    return this._vm.$data;
+  }
+
+  commit(_type, _payload) {
+    const {type, payload} = unifyObjectStyle(_type, _payload);
+    const mutations = this._mutations[type];
+    this._withCommit(()=>{
+      forEachValue(mutations, (mutationFn) => mutationFn(payload));
+    })
+  }
+
+  _withCommit(fn) {
+    const _comitting = this._comitting;
+    this._comitting = true;
+    fn();
+    this._comitting = _comitting;
+  }
 }
+
+/**
+ * 整理 payload 格式
+ * @param {*} _type 
+ * @param {*} _payload 
+ */
+function unifyObjectStyle(type, payload) {
+  if (!isObject(type)) {
+    return {
+      type,
+      payload,
+    }
+  }
+  return type;
+}
+
+
 
 /**
  * @desc 注册模块
@@ -38,6 +79,15 @@ function installModule(Store,rootState, path, module) {
   // 获取 namespaced 的 值 studnet/
   const nameSpace = Store._modules.getNamespace(path);
   const local = makeLocalContext(Store, path, nameSpace);
+
+  // mutaions
+  module.forEachMutation((mutationFn, mutaionName) => {
+    const type = nameSpace + mutaionName;
+    registerMutations(Store, mutationFn, type, local)
+  })
+ 
+
+ // getter
   module.forEachGetter((getterFn, getterName) => {
     // 将 namespace 和 getter 名称 拼接
     const type = nameSpace + getterName;
@@ -104,8 +154,22 @@ function makeLocalGetter(store, nameSpace) {
  * @param {*} getterName 
  */
 function registerGetter(store, getterFn, getterName, local) {
-  console.log(local);
   store._wrappedGetters[getterName] = () => getterFn(local.state, local.getters, store.state, store.getters)
+}
+
+/**
+ * 注册mutation
+ * @param {*} store 
+ * @param {*} mutationFn 
+ * @param {*} mutationName 
+ * @param {*} local 
+ */
+function registerMutations(store, mutationFn, mutationName, local) {
+  if (!store._mutations[mutationName]) {
+    store._mutations[mutationName] = [];
+  }
+  
+  store._mutations[mutationName].push((payload)=> mutationFn.call(store, local.state, payload))
 }
 
 /**
@@ -126,7 +190,6 @@ function getNestedState(path, rootState) {
  */
 function resetStoreVM(store, option) {
   // this.state = option.state;
-
   const computed = {}
   const _wrappedGetters = store._wrappedGetters;
   store._makeLocalGettersCache = {};
@@ -146,7 +209,27 @@ function resetStoreVM(store, option) {
     computed,
   })
 
-  store.state = store. _vm.$data;
+  // store.state = store. _vm.$data; Store 中 get state
+  if (store._strict) {
+    enableStrictMode(store);
+  }
+}
+
+/**
+ * 严格模式
+ * @param {*} store 
+ */
+function enableStrictMode(store) {
+  store._vm.$watch(function(){
+    return store.state
+  },function(){
+    if(!store._comitting) {
+      throw new Error('Error: [vuex] do not mutate vuex store state outside mutation handlers.');
+    }
+  },{
+    deep: true,
+    sync: true,
+  })
 }
 
 /**

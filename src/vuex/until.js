@@ -7,3 +7,7 @@ export function partial (fn, arg) {
     return fn(arg)
   }
 }
+
+export function isObject(obj) {
+  return typeof obj === 'object' && obj != null;
+}

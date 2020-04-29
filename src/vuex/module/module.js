@@ -21,7 +21,14 @@ export default class Module {
   forEachGetter(fn) {
     const getters = this._rawModule.getters;
     if(getters) {
-      forEachValue(getters, (getterFn, getterName) => fn(getterFn, getterName))
+      forEachValue(getters, (getterFn, getterName) => fn(getterFn, getterName));
+    }
+  }
+
+  forEachMutation(fn) {
+    const mutations = this._rawModule.mutations;
+    if(mutations) {
+      forEachValue(mutations, (mutationFn, mutationName) => fn(mutationFn, mutationName));
     }
   }
 }
