@@ -31,4 +31,11 @@ export default class Module {
       forEachValue(mutations, (mutationFn, mutationName) => fn(mutationFn, mutationName));
     }
   }
+
+  forAction(fn) {
+    const actions = this._rawModule.actions;
+    if(actions) {
+      forEachValue(actions, (value, key) => fn(value, key));
+    }
+  }
 }

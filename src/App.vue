@@ -12,22 +12,10 @@
 <script>
 export default {
   name: 'App',
-  created() {
-     console.log(this.$store);
-  },
   methods: {
     handleClick() {
-      this.$store.commit({
-        type: 'changeCount',
-        payload: {
-          count: 3,
-        }
-      })
-      this.$store.commit('student/changeCount', {
-        count: 3,
-      })
-      // this.$store.state.count ++;
-      // this.$store.state.student.count ++ ;
+      this.$store.dispatch('actionCount', { count: 5});
+      this.$store.dispatch('student/actionCount', { count: 5});
     }
   }
 }

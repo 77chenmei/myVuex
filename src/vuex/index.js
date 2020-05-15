@@ -1,6 +1,6 @@
 import applyMixin from './minix';
 import ModuleCollection from './module/module-collection';
-import {partial, isObject, forEachValue} from './until';
+import {partial, isObject, forEachValue, isPromise} from './until';
 
 let vue;
 class Store {
@@ -11,10 +11,24 @@ class Store {
     this.getters = {};
     this._makeLocalGettersCache = {};
     this._mutations = {};
+    // _actions
+    this._actions = {};
     // 是否是严格模式
     this._strict = !!option.strict;
     // 修改 state 锁
     this._comitting = false;
+
+    // 改变 commit  dispatch 函数 的this 指向
+    const store = this;
+    const {commit, dispatch} = this;
+    this.commit = function(type, playod) {
+      return commit.call(store, type, playod);
+    }
+    // // 外部调用的是这个dispatch  所以这边也需要返回值
+    this.dispatch = (type, payload) => {
+      return dispatch.call(store, type, payload);
+    }
+
     installModule(this, option.state, [], this._modules.root)
     // $store.state 及 数据双向绑定
     resetStoreVM(this, option); 
@@ -37,6 +51,23 @@ class Store {
     this._comitting = true;
     fn();
     this._comitting = _comitting;
+  }
+
+  dispatch(_type, _payload) {
+    const {type,payload} = unifyObjectStyle(_type, _payload);
+    const actions = this._actions[type];
+
+    if(!actions) {
+      throw new Error('Error:type');
+    }
+    
+    // 返回的每个函数的执行结果 每个结果都是一个promise
+    const result = actions.length > 1 ?
+                  Promise.all(actions.map(actionFn=> actionFn(payload)))
+                  : actions[0](payload);
+ 
+    return result;
+   //forEachValue(actions, actionFn=> actionFn(playod))
   }
 }
 
@@ -94,10 +125,43 @@ function installModule(Store,rootState, path, module) {
     registerGetter(Store, getterFn, type, local);
   })
 
+  // action
+  module.forAction((childAction, childName) => {
+    const type = nameSpace + childName;
+    registerActions(Store, type, childAction, local);
+  })
+
   // 循环遍历 module
   module.forEachChild((childModule, childName) => {
     installModule(Store, rootState, path.concat(childName), childModule);
   })
+}
+
+/**
+ * 注册 actions
+ * @param {*} store 
+ * @param {*} actionName 
+ * @param {*} actionFn 
+ * @param {*} local 
+ */
+function registerActions(store, actionName, actionFn, local) {
+  const entry = store._actions[actionName] || (store._actions[actionName] = []);
+  // 改变 action 函数中 this 指向，call
+  entry.push((playod)=> {
+    let res = actionFn({
+      commit: local.commit,
+      dispatch: local.dispatch,
+      getter: local.getters,
+      rootGetters: store.getters,
+      rootState: store.state,
+      state: local.state,
+    }, playod);
+
+    if (!isPromise(res)) {
+      res = Promise.resolve(res);
+    }
+    return res;
+  });
 }
 
 /**
@@ -107,14 +171,24 @@ function installModule(Store,rootState, path, module) {
  * @param {*} nameSpace 
  */
 function makeLocalContext(store, path, nameSpace) {
-  const isNameSpaced = nameSpace !== '';
-  const local = {};
+  const noNamespace = nameSpace === '';
+  const local = {
+    commit: noNamespace ? store.commit : (_type, _payload) => {
+      const {type, payload} = unifyObjectStyle(_type, _payload);
+      store.commit(nameSpace + type, payload);
+    },
+    dispatch: noNamespace ? store.dispatch : (_type, _payload) => {
+      const {type, payload} = unifyObjectStyle(_type, _payload);
+      store.dispatch(nameSpace + type, payload);
+    },
+  };
+
   Object.defineProperties(local, {
     state: {
       get:() => getNestedState(path, store.state)
     },
     getters: {
-      get: isNameSpaced ? () => makeLocalGetter(store, nameSpace) : () => store.getters,
+      get: noNamespace ?  () => store.getters : () => makeLocalGetter(store, nameSpace),
     }
   })
 
@@ -182,7 +256,7 @@ function getNestedState(path, rootState) {
     return moduleState[path];
   },rootState)
 }
-
+ 
 /**
  * @desc 重置store 实例
  * @param {Store} store 

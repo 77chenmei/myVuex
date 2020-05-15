@@ -16,7 +16,13 @@ export default new Vuex.Store({
   },
   mutations: {
     changeCount(state,payload){
+      
       state.count += payload.count;
+    }
+  },
+  actions: {
+    actionCount({commit}, payload) {
+      commit('changeCount', payload);
     }
   },
   modules: {
@@ -31,8 +37,13 @@ export default new Vuex.Store({
         },
       },
       mutations: {
-        changeCount(state,payload){
+        changeCount(state, payload){
           state.count += payload.count;
+        }
+      },
+      actions: {
+        actionCount({commit}, payload) {
+          commit('changeCount', payload);
         }
       },
     },

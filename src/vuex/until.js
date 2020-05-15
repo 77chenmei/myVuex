@@ -11,3 +11,11 @@ export function partial (fn, arg) {
 export function isObject(obj) {
   return typeof obj === 'object' && obj != null;
 }
+
+/**
+ * 判断是否 promise
+ * @param {*} obj 
+ */
+export function isPromise(obj) {
+  return obj && typeof obj.then === 'function';
+}
