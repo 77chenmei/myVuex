@@ -1,6 +1,7 @@
 import applyMixin from './minix';
 import ModuleCollection from './module/module-collection';
 import {partial, isObject, forEachValue, isPromise} from './until';
+import { mapState, mapGettrers, mapMutations, mapActions } from './helper';
 
 let vue;
 class Store {
@@ -17,6 +18,7 @@ class Store {
     this._strict = !!option.strict;
     // 修改 state 锁
     this._comitting = false;
+    this._modulesNamespaceMap = {};
 
     // 改变 commit  dispatch 函数 的this 指向
     const store = this;
@@ -109,7 +111,11 @@ function installModule(Store,rootState, path, module) {
 
   // 获取 namespaced 的 值 studnet/
   const nameSpace = Store._modules.getNamespace(path);
-  const local = makeLocalContext(Store, path, nameSpace);
+  const local = module.context = makeLocalContext(Store, path, nameSpace);
+
+  if (module._namespaced) {
+    Store._modulesNamespaceMap[nameSpace] = module;
+  }
 
   // mutaions
   module.forEachMutation((mutationFn, mutaionName) => {
@@ -319,4 +325,17 @@ function install(_vue) {
 export default{
   install,
   Store,
+  mapState,
+  mapGettrers,
+  mapMutations,
+  mapActions,
+}
+
+export {
+  install,
+  Store,
+  mapState,
+  mapGettrers,
+  mapMutations,
+  mapActions,
 }

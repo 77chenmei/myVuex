@@ -7,7 +7,7 @@ Vue.use(Vuex)
 export default new Vuex.Store({
   strict: true,
   state: {
-    count: 0,
+    count: 1,
   },
   getters: {
     doubleCount(state) {
@@ -16,7 +16,6 @@ export default new Vuex.Store({
   },
   mutations: {
     changeCount(state,payload){
-      
       state.count += payload.count;
     }
   },
@@ -29,21 +28,22 @@ export default new Vuex.Store({
     student: {
       namespaced: true,
       state: {
-        count: 2222,
+        num: 10,
       },
       getters: {
-        studentDoubleCount(state) {
-          return state.count * 2;
+        doubleNum(state) {
+          return state.num * 2;
         },
       },
       mutations: {
-        changeCount(state, payload){
-          state.count += payload.count;
+        changeNum(state, payload){
+          state.num += payload.num;
         }
       },
       actions: {
-        actionCount({commit}, payload) {
-          commit('changeCount', payload);
+        actionNum({commit}, payload) {
+          console.log(payload);
+          commit('changeNum', payload);
         }
       },
     },
